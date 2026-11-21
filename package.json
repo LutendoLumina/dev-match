@@ -1,0 +1,13 @@
+{
+  "name": "dev-match",
+  "private": true,
+  "description": "Full-stack matchmaking app for developers (NestJS + React + PostgreSQL)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm ci --prefix frontend --include=dev && npm ci --prefix backend --include=dev && npm run build --prefix frontend && npm run build --prefix backend",
+    "start": "npm run db:deploy --prefix backend && npm run start:prod --prefix backend"
+  }
+}

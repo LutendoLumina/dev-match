@@ -1,26 +1,18 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import cookieParser from 'cookie-parser';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
+import { configureApp, serveFrontend } from './app.setup.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Read cookies (the login token lives in an httpOnly cookie).
-  app.use(cookieParser());
+  configureApp(app);
+  if (process.env.SERVE_FRONTEND === 'true') {
+    serveFrontend(app);
+  }
 
-  // Reject request bodies that fail DTO validation, and strip unknown fields.
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-  );
-
-  // Allow the React frontend to call the API (with its cookie) when hosted on another origin.
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
-    credentials: true,
-  });
-
+  // Hosting platforms like Render tell the app which port to use via PORT.
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();

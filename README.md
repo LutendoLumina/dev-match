@@ -1,6 +1,8 @@
 # dev-match
 
-A full-stack matchmaking app for developers. People create profiles describing who they'd like to meet, and others can browse them.
+A full-stack matchmaking app for developers. Create a profile, like the people you'd like to meet, and chat when it's a match.
+
+**Live demo:** _coming soon_ (log in as `thabo@example.com` / `password123` to see matches and messages). The free server sleeps when idle, so the first visit can take about 30–50 seconds to load.
 
 | Layer    | Tech                                                         |
 | -------- | ------------------------------------------------------------ |
@@ -11,8 +13,9 @@ A full-stack matchmaking app for developers. People create profiles describing w
 
 ```
 dev-match/
-├── backend/    NestJS REST API + Prisma schema and migrations
-└── frontend/   React single-page app
+├── backend/     NestJS REST API + Prisma schema and migrations
+├── frontend/    React single-page app
+└── render.yaml  Deployment config (Render)
 ```
 
 ## Features
@@ -57,7 +60,7 @@ In development, the frontend forwards any `/api/*` request to the backend (see `
 
 ## API
 
-Routes marked 🔒 need you to be logged in. Logging in sets an httpOnly `access_token` cookie, which the browser then sends automatically.
+All routes below are prefixed with `/api`, for example `GET /api/profiles`. Routes marked 🔒 need you to be logged in. Logging in sets an httpOnly `access_token` cookie, which the browser then sends automatically.
 
 | Method | Path                  | Description                        | Success |
 | ------ | --------------------- | ---------------------------------- | ------- |
@@ -121,3 +124,13 @@ cd backend
 npm test            # unit tests (no database needed)
 npm run test:e2e    # API tests against the database in DATABASE_URL
 ```
+
+## Deployment
+
+The app runs as a **single web service on [Render](https://render.com)**, configured in [`render.yaml`](render.yaml). The NestJS server serves the API under `/api` and the built React app for every other path. Because the whole site is on one origin, it needs no CORS, and the login cookie stays first-party with `SameSite=Lax`.
+
+- **Build** (`npm run build` in the repo root): installs both apps, builds the React app, generates the Prisma client and compiles the backend.
+- **Start** (`npm start`): runs `prisma migrate deploy` to apply any new migrations, then starts the server.
+- **Health check:** `GET /api/health`.
+- **Environment:** `DATABASE_URL` points to a separate Neon branch for production, so local development and tests never touch live data. Render generates `JWT_SECRET` automatically.
+- **Auto-deploy:** every merge to `main` redeploys the app.

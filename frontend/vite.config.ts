@@ -5,13 +5,12 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // In development, forward /api/* to the NestJS backend so the browser
+    // In development, forward /api/* to the NestJS backend (which serves its API under /api) so the browser
     // only ever talks to one origin (no CORS setup needed locally).
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
