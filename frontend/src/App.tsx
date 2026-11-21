@@ -4,6 +4,7 @@ import { RequireAuth } from './auth/RequireAuth.tsx'
 import { AuthPage } from './pages/AuthPage.tsx'
 import { CreateProfilePage } from './pages/CreateProfilePage.tsx'
 import { EditProfilePage } from './pages/EditProfilePage.tsx'
+import { MatchesPage } from './pages/MatchesPage.tsx'
 import { ProfileDetailPage } from './pages/ProfileDetailPage.tsx'
 import { ProfilesListPage } from './pages/ProfilesListPage.tsx'
 
@@ -26,6 +27,7 @@ function Header() {
         <nav className="nav">
           {user ? (
             <>
+              <Link to="/matches">Matches</Link>
               {user.profileId ? (
                 <Link to={`/profiles/${user.profileId}`}>My profile</Link>
               ) : (
@@ -76,6 +78,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <EditProfilePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/matches"
+            element={
+              <RequireAuth>
+                <MatchesPage />
               </RequireAuth>
             }
           />

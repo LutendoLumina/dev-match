@@ -84,6 +84,58 @@ describe.runIf(process.env.DATABASE_URL)('API (e2e)', () => {
     await aliceAgent.get('/auth/me').expect(200);
   });
 
+  it('matches two users who like each other', async () => {
+    const aliceAgent = request.agent(app.getHttpServer());
+    const bobAgent = request.agent(app.getHttpServer());
+
+    // Fresh logins (accounts exist from the previous test); create profiles.
+    await aliceAgent.post('/auth/login').send(alice).expect(200);
+    await bobAgent.post('/auth/login').send(bob).expect(200);
+
+    // Liking requires a profile of your own
+    const bobProfile = await bobAgent
+      .post('/profiles')
+      .send({ name: 'Bob', description: 'Likes e2e tests' })
+      .expect(201);
+    await aliceAgent.post(`/profiles/${bobProfile.body.id}/like`).expect(403);
+
+    const aliceProfile = await aliceAgent
+      .post('/profiles')
+      .send({ name: 'Alice', description: 'Also likes e2e tests' })
+      .expect(201);
+    const aliceId = aliceProfile.body.id;
+    const bobId = bobProfile.body.id;
+
+    // Can't like yourself; logged-out users can't like at all
+    await aliceAgent.post(`/profiles/${aliceId}/like`).expect(400);
+    await request(app.getHttpServer()).post(`/profiles/${bobId}/like`).expect(401);
+
+    // One-sided like: no match yet (and liking twice is fine)
+    await aliceAgent
+      .post(`/profiles/${bobId}/like`)
+      .expect(200)
+      .expect((res) => expect(res.body).toEqual({ matched: false }));
+    await aliceAgent.post(`/profiles/${bobId}/like`).expect(200);
+    await aliceAgent.get('/likes').expect((res) => expect(res.body).toEqual([bobId]));
+    await aliceAgent.get('/matches').expect((res) => expect(res.body).toEqual([]));
+
+    // Bob likes back: it's a match for both of them
+    await bobAgent
+      .post(`/profiles/${aliceId}/like`)
+      .expect(200)
+      .expect((res) => expect(res.body).toEqual({ matched: true }));
+    await aliceAgent
+      .get('/matches')
+      .expect((res) => expect(res.body.map((p: { id: string }) => p.id)).toEqual([bobId]));
+    await bobAgent
+      .get('/matches')
+      .expect((res) => expect(res.body.map((p: { id: string }) => p.id)).toEqual([aliceId]));
+
+    // Unliking undoes the match
+    await aliceAgent.delete(`/profiles/${bobId}/like`).expect(204);
+    await bobAgent.get('/matches').expect((res) => expect(res.body).toEqual([]));
+  });
+
   it('rejects invalid input', async () => {
     const server = app.getHttpServer();
     await request(server).post('/auth/register').send({ email: 'not-an-email', password: 'short' }).expect(400);

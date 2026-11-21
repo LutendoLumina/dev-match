@@ -41,4 +41,24 @@ if (existing > 0) {
   }
   console.log(`Seeded ${examples.length} users (password: password123).`);
 }
+
+// Demo likes, so there is something to see straight away:
+// Thabo and Sarah have matched, and Thabo likes Lutendo (Lutendo can like back to match).
+if ((await prisma.like.count()) === 0) {
+  const byName = async (name: string) =>
+    prisma.profile.findFirst({ where: { name, user: { email: { endsWith: '@example.com' } } } });
+  const [lutendo, thabo, sarah] = await Promise.all(['Lutendo', 'Thabo', 'Sarah'].map(byName));
+
+  if (lutendo && thabo && sarah) {
+    await prisma.like.createMany({
+      data: [
+        { fromProfileId: thabo.id, toProfileId: sarah.id },
+        { fromProfileId: sarah.id, toProfileId: thabo.id },
+        { fromProfileId: thabo.id, toProfileId: lutendo.id },
+      ],
+    });
+    console.log('Seeded demo likes.');
+  }
+}
+
 await prisma.$disconnect();
