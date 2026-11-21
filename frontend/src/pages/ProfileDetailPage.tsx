@@ -11,6 +11,7 @@ export function ProfileDetailPage() {
   const { user, refresh } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [liked, setLiked] = useState(false)
+  const [matched, setMatched] = useState(false)
   const [justMatched, setJustMatched] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,9 +28,11 @@ export function ProfileDetailPage() {
   const canLike = Boolean(user?.profileId)
   useEffect(() => {
     if (!canLike) return
-    likesApi
-      .likedIds()
-      .then((ids) => setLiked(ids.includes(id!)))
+    Promise.all([likesApi.likedIds(), likesApi.matches()])
+      .then(([likedIds, matches]) => {
+        setLiked(likedIds.includes(id!))
+        setMatched(matches.some((match) => match.id === id))
+      })
       .catch(() => {})
   }, [canLike, id])
 
@@ -54,7 +57,7 @@ export function ProfileDetailPage() {
       {justMatched && (
         <div className="match-banner" role="status">
           🎉 It's a match! You and {profile.name} like each other.{' '}
-          <Link to="/matches">See your matches</Link>
+          <Link to={`/matches/${profile.id}`}>Send a message</Link>
         </div>
       )}
 
@@ -83,11 +86,18 @@ export function ProfileDetailPage() {
           <LikeButton
             profileId={profile.id}
             liked={liked}
-            onChange={(nowLiked, matched) => {
+            onChange={(nowLiked, nowMatched) => {
               setLiked(nowLiked)
-              setJustMatched(matched)
+              setMatched(nowMatched) // unliking always ends a match
+              setJustMatched(nowMatched)
             }}
           />
+        )}
+
+        {!isOwner && matched && (
+          <Link to={`/matches/${profile.id}`} className="button">
+            💬 Message
+          </Link>
         )}
 
         {!isOwner && user && !canLike && (
