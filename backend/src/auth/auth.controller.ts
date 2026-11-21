@@ -10,12 +10,11 @@ import { AuthCredentialsDto } from './dto/auth-credentials.dto.js';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // POST /auth/register: create an account and log in
+  // POST /auth/register: create an account. Does NOT log in; the user logs in
+  // afterwards with POST /auth/login, which confirms they know the password.
   @Post('register')
-  async register(@Body() dto: AuthCredentialsDto, @Res({ passthrough: true }) res: Response) {
-    const { userId, token } = await this.authService.register(dto);
-    res.cookie(AUTH_COOKIE, token, authCookieOptions);
-    return this.authService.getMe(userId);
+  register(@Body() dto: AuthCredentialsDto) {
+    return this.authService.register(dto);
   }
 
   // POST /auth/login

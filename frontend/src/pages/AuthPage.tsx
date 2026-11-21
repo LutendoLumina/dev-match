@@ -8,13 +8,17 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const auth = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [email, setEmail] = useState('')
+  const state = location.state as { from?: string; registeredEmail?: string } | null
+  // Coming from sign-up: pre-fill the email they just registered.
+  const [email, setEmail] = useState(state?.registeredEmail ?? '')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   const isLogin = mode === 'login'
-  if (auth.user) return <Navigate to="/profiles" replace />
+  const justRegistered = isLogin && Boolean(state?.registeredEmail)
+  // Already logged in? Nothing to do here (skipped mid-submit so our own redirect wins).
+  if (auth.user && !submitting) return <Navigate to="/profiles" replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -22,12 +26,13 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     setErrors([])
     try {
       if (isLogin) {
-        await auth.login({ email, password })
-        // Go back to the page that sent us here, if any.
-        navigate((location.state as { from?: string } | null)?.from ?? '/profiles', { replace: true })
+        const user = await auth.login({ email, password })
+        // New users set up their profile first; others go back where they came from.
+        const destination = user.profileId ? (state?.from ?? '/profiles') : '/profiles/new'
+        navigate(destination, { replace: true })
       } else {
         await auth.register({ email, password })
-        navigate('/profiles/new', { replace: true }) // new users set up their profile next
+        navigate('/login', { replace: true, state: { registeredEmail: email.trim().toLowerCase() } })
       }
     } catch (error) {
       setErrors(error instanceof ApiError ? error.messages : ['Something went wrong.'])
@@ -39,6 +44,11 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     <>
       <h1>{isLogin ? 'Log in' : 'Create an account'}</h1>
       <form className="card form" onSubmit={handleSubmit}>
+        {justRegistered && errors.length === 0 && (
+          <p className="success" role="status">
+            Account created! Log in with your new password to continue.
+          </p>
+        )}
         {errors.length > 0 && (
           <ul className="errors" role="alert">
             {errors.map((message) => (
@@ -62,6 +72,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           Password
           <input
             type="password"
+            autoFocus={justRegistered}
             autoComplete={isLogin ? 'current-password' : 'new-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

@@ -15,6 +15,7 @@ describe('AuthService', () => {
   beforeEach(async () => {
     prisma.user.findUnique.mockReset();
     prisma.user.create.mockReset();
+    jwt.signAsync.mockClear();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -27,14 +28,16 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('stores a bcrypt hash, never the plain password', async () => {
+    it('stores a bcrypt hash and returns the public user, without logging in', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      prisma.user.create.mockResolvedValue({ id: 'user-1' });
+      prisma.user.create.mockResolvedValue({ id: 'user-1', email: credentials.email });
 
       await expect(service.register(credentials)).resolves.toEqual({
-        userId: 'user-1',
-        token: 'signed.jwt.token',
+        id: 'user-1',
+        email: credentials.email,
+        profileId: null,
       });
+      expect(jwt.signAsync).not.toHaveBeenCalled();
 
       const { passwordHash } = prisma.user.create.mock.calls[0][0].data;
       expect(passwordHash).not.toBe(credentials.password);

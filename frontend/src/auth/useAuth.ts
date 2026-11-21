@@ -6,7 +6,9 @@ export interface AuthState {
   user: User | null
   /** True until we know whether someone is logged in. */
   loading: boolean
-  login: (credentials: Credentials) => Promise<void>
+  /** Logs in and returns the user. */
+  login: (credentials: Credentials) => Promise<User>
+  /** Creates an account. Does not log in: call `login` afterwards. */
   register: (credentials: Credentials) => Promise<void>
   logout: () => Promise<void>
   /** Re-fetch the user, e.g. after creating or deleting their profile. */
