@@ -2,7 +2,7 @@
 
 A full-stack matchmaking app for developers. Create a profile, like the people you'd like to meet, and chat when it's a match.
 
-**Live demo:** _coming soon_ (log in as `thabo@example.com` / `password123` to see matches and messages). The free server sleeps when idle, so the first visit can take about 30–50 seconds to load.
+**Live demo: [dev-match-n4vd.onrender.com](https://dev-match-n4vd.onrender.com)** (log in as `thabo@example.com` / `password123` to see matches and messages). The free server sleeps when idle, so the first visit can take about 30–50 seconds to load.
 
 | Layer    | Tech                                                         |
 | -------- | ------------------------------------------------------------ |
