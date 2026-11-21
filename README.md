@@ -20,7 +20,7 @@ dev-match/
 - [x] **Profiles**: list, view, create, edit and delete developer profiles
 - [x] **Accounts**: sign up, log in and log out, with sessions stored in an httpOnly JWT cookie
 - [x] **Ownership**: each account has one profile, and only its owner can edit or delete it
-- [ ] Likes and matching
+- [x] **Likes and matching**: like other developers; when two people like each other, it's a match
 - [ ] Messaging between matches
 
 ## Running locally
@@ -70,6 +70,10 @@ Routes marked 🔒 need you to be logged in. Logging in sets an httpOnly `access
 | POST   | `/profiles` 🔒        | Create your profile (one per user) | 201     |
 | PUT    | `/profiles/:id` 🔒    | Update your profile                | 200     |
 | DELETE | `/profiles/:id` 🔒    | Delete your profile                | 204     |
+| POST   | `/profiles/:id/like` 🔒 | Like a profile; returns `{ "matched": true/false }` | 200 |
+| DELETE | `/profiles/:id/like` 🔒 | Remove your like (undoes a match) | 204    |
+| GET    | `/likes` 🔒           | Ids of the profiles you've liked   | 200     |
+| GET    | `/matches` 🔒         | Profiles that liked you back       | 200     |
 
 Request bodies:
 
@@ -84,11 +88,15 @@ Error codes:
 
 | Code | Meaning |
 | ---- | ------- |
-| `400` | Invalid request body |
+| `400` | Invalid request body, or liking your own profile |
 | `401` | Not logged in, or wrong email/password |
-| `403` | Not your profile |
+| `403` | Not your profile, or liking before you've created a profile |
 | `404` | Not found |
 | `409` | Email already registered, or you already have a profile |
+
+### How matching works
+
+A `likes` table stores "profile A liked profile B", with a unique constraint on the pair, so liking twice has no extra effect. A match isn't stored separately: it's simply two likes pointing at each other, found with one query (`GET /matches`). Because of that, a match can't get out of sync with the likes. Unliking someone undoes the match automatically, and deleting a profile removes its likes (cascade).
 
 ### Security notes
 
