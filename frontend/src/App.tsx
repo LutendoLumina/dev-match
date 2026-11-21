@@ -4,6 +4,7 @@ import { RequireAuth } from './auth/RequireAuth.tsx'
 import { AuthPage } from './pages/AuthPage.tsx'
 import { CreateProfilePage } from './pages/CreateProfilePage.tsx'
 import { EditProfilePage } from './pages/EditProfilePage.tsx'
+import { ChatPage } from './pages/ChatPage.tsx'
 import { MatchesPage } from './pages/MatchesPage.tsx'
 import { ProfileDetailPage } from './pages/ProfileDetailPage.tsx'
 import { ProfilesListPage } from './pages/ProfilesListPage.tsx'
@@ -86,6 +87,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <MatchesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/matches/:profileId"
+            element={
+              <RequireAuth>
+                <ChatPage />
               </RequireAuth>
             }
           />

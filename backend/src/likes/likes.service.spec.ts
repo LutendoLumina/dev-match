@@ -97,6 +97,13 @@ describe('LikesService', () => {
     await expect(service.likedProfileIds(userId)).resolves.toEqual([theirProfile.id]);
   });
 
+  it('isMatch is true only when likes exist in both directions', async () => {
+    prisma.like.count = vi.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(1);
+
+    await expect(service.isMatch(myProfile.id, theirProfile.id)).resolves.toBe(true);
+    await expect(service.isMatch(myProfile.id, theirProfile.id)).resolves.toBe(false);
+  });
+
   describe('matches', () => {
     it('queries for profiles where likes go both ways', async () => {
       givenProfiles();

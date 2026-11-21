@@ -21,7 +21,7 @@ dev-match/
 - [x] **Accounts**: sign up, log in and log out, with sessions stored in an httpOnly JWT cookie
 - [x] **Ownership**: each account has one profile, and only its owner can edit or delete it
 - [x] **Likes and matching**: like other developers; when two people like each other, it's a match
-- [ ] Messaging between matches
+- [x] **Messaging**: matches can chat, with an inbox showing each conversation's last message and unread count
 
 ## Running locally
 
@@ -74,6 +74,10 @@ Routes marked 🔒 need you to be logged in. Logging in sets an httpOnly `access
 | DELETE | `/profiles/:id/like` 🔒 | Remove your like (undoes a match) | 204    |
 | GET    | `/likes` 🔒           | Ids of the profiles you've liked   | 200     |
 | GET    | `/matches` 🔒         | Profiles that liked you back       | 200     |
+| GET    | `/conversations` 🔒   | Your matches, each with its last message and unread count | 200 |
+| GET    | `/conversations/:profileId/messages` 🔒 | Messages with a match; `?since=<ISO date>` returns only newer ones | 200 |
+| POST   | `/conversations/:profileId/messages` 🔒 | Send a message: `{ "body": "1–2000 characters" }` | 201 |
+| POST   | `/conversations/:profileId/read` 🔒 | Mark their messages as read | 204 |
 
 Request bodies:
 
@@ -90,13 +94,19 @@ Error codes:
 | ---- | ------- |
 | `400` | Invalid request body, or liking your own profile |
 | `401` | Not logged in, or wrong email/password |
-| `403` | Not your profile, or liking before you've created a profile |
+| `403` | Not your profile, liking before you've created a profile, or messaging someone you haven't matched with |
 | `404` | Not found |
 | `409` | Email already registered, or you already have a profile |
 
 ### How matching works
 
 A `likes` table stores "profile A liked profile B", with a unique constraint on the pair, so liking twice has no extra effect. A match isn't stored separately: it's simply two likes pointing at each other, found with one query (`GET /matches`). Because of that, a match can't get out of sync with the likes. Unliking someone undoes the match automatically, and deleting a profile removes its likes (cascade).
+
+### How messaging works
+
+- **Who can message:** only matched users can message each other. The match is checked on every request, so if either person unlikes the other, the conversation closes immediately.
+- **Live updates:** the chat page polls every 4 seconds with `?since=<time of last message>`, so each poll only transfers new messages, and it skips polling while the tab is hidden. Polling keeps the backend stateless and simple. WebSockets (for example, a NestJS gateway) would be the next step for instant delivery.
+- **Read status:** marking messages as read is a separate `POST`, not a side effect of `GET`, so loading messages never changes data.
 
 ### Security notes
 

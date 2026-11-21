@@ -71,6 +71,19 @@ export class LikesService {
     });
   }
 
+  /** True when both profiles have liked each other. */
+  async isMatch(profileIdA: string, profileIdB: string): Promise<boolean> {
+    const count = await this.prisma.like.count({
+      where: {
+        OR: [
+          { fromProfileId: profileIdA, toProfileId: profileIdB },
+          { fromProfileId: profileIdB, toProfileId: profileIdA },
+        ],
+      },
+    });
+    return count === 2;
+  }
+
   private async requireOwnProfile(userId: string) {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
     if (!profile) {

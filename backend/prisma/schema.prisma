@@ -38,7 +38,30 @@ model Profile {
   likesGiven    Like[] @relation("LikesGiven")
   likesReceived Like[] @relation("LikesReceived")
 
+  messagesSent     Message[] @relation("MessagesSent")
+  messagesReceived Message[] @relation("MessagesReceived")
+
   @@map("profiles")
+}
+
+// A chat message between two matched profiles.
+model Message {
+  id                 String    @id @default(uuid()) @db.Uuid
+  senderProfileId    String    @db.Uuid
+  recipientProfileId String    @db.Uuid
+  body               String    @db.VarChar(2000)
+  createdAt          DateTime  @default(now())
+  // Null until the recipient opens the conversation.
+  readAt             DateTime?
+
+  sender    Profile @relation("MessagesSent", fields: [senderProfileId], references: [id], onDelete: Cascade)
+  recipient Profile @relation("MessagesReceived", fields: [recipientProfileId], references: [id], onDelete: Cascade)
+
+  // Loading a conversation in time order.
+  @@index([senderProfileId, recipientProfileId, createdAt])
+  // Counting a user's unread messages.
+  @@index([recipientProfileId, readAt])
+  @@map("messages")
 }
 
 // "fromProfile liked toProfile". A match is two likes pointing at each other,

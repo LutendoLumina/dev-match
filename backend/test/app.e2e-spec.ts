@@ -131,9 +131,43 @@ describe.runIf(process.env.DATABASE_URL)('API (e2e)', () => {
       .get('/matches')
       .expect((res) => expect(res.body.map((p: { id: string }) => p.id)).toEqual([aliceId]));
 
-    // Unliking undoes the match
+    // Matched users can chat
+    await aliceAgent
+      .post(`/conversations/${bobId}/messages`)
+      .send({ body: '  Hi Bob!  ' })
+      .expect(201)
+      .expect((res) => expect(res.body.body).toBe('Hi Bob!')); // trimmed
+    await aliceAgent.post(`/conversations/${bobId}/messages`).send({ body: '   ' }).expect(400);
+
+    // Bob sees one unread message, reads it, and replies
+    await bobAgent.get('/conversations').expect((res) => {
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0]).toMatchObject({ unreadCount: 1, lastMessage: { body: 'Hi Bob!' } });
+    });
+    await bobAgent
+      .get(`/conversations/${aliceId}/messages`)
+      .expect(200)
+      .expect((res) => expect(res.body.map((m: { body: string }) => m.body)).toEqual(['Hi Bob!']));
+    await bobAgent.post(`/conversations/${aliceId}/read`).expect(204);
+    await bobAgent
+      .get('/conversations')
+      .expect((res) => expect(res.body[0].unreadCount).toBe(0));
+    const reply = await bobAgent
+      .post(`/conversations/${aliceId}/messages`)
+      .send({ body: 'Hey Alice' })
+      .expect(201);
+
+    // Polling with ?since only returns newer messages
+    await aliceAgent
+      .get(`/conversations/${bobId}/messages`)
+      .query({ since: reply.body.createdAt })
+      .expect((res) => expect(res.body.map((m: { body: string }) => m.body)).toEqual(['Hey Alice']));
+
+    // Unliking undoes the match and closes the conversation
     await aliceAgent.delete(`/profiles/${bobId}/like`).expect(204);
     await bobAgent.get('/matches').expect((res) => expect(res.body).toEqual([]));
+    await bobAgent.post(`/conversations/${aliceId}/messages`).send({ body: 'Hello?' }).expect(403);
+    await bobAgent.get(`/conversations/${aliceId}/messages`).expect(403);
   });
 
   it('rejects invalid input', async () => {
