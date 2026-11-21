@@ -12,12 +12,28 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile Profile?
+
+  @@map("users")
+}
+
 model Profile {
   id          String   @id @default(uuid()) @db.Uuid
   name        String   @db.VarChar(100)
   description String   @db.VarChar(1000)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Each user owns at most one profile; deleting the user deletes it.
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
 }

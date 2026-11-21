@@ -18,7 +18,8 @@ dev-match/
 ## Features
 
 - [x] **Profiles**: list, view, create, edit and delete developer profiles
-- [ ] Accounts and login (JWT)
+- [x] **Accounts**: sign up, log in and log out, with sessions stored in an httpOnly JWT cookie
+- [x] **Ownership**: each account has one profile, and only its owner can edit or delete it
 - [ ] Likes and matching
 - [ ] Messaging between matches
 
@@ -36,9 +37,9 @@ Requirements: Node.js 22+ and a free PostgreSQL database (Neon is the easiest, s
 ```bash
 cd backend
 npm install
-cp .env.example .env      # then paste your connection string into DATABASE_URL
+cp .env.example .env      # then fill in DATABASE_URL and JWT_SECRET
 npm run db:migrate        # creates the tables
-npm run db:seed           # optional: adds example profiles
+npm run db:seed           # optional: example users (password: password123)
 npm run start:dev
 ```
 
@@ -56,21 +57,44 @@ In development, the frontend forwards any `/api/*` request to the backend (see `
 
 ## API
 
-| Method | Path            | Description          | Success |
-| ------ | --------------- | -------------------- | ------- |
-| GET    | `/profiles`     | List all profiles    | 200     |
-| GET    | `/profiles/:id` | Get one profile      | 200     |
-| POST   | `/profiles`     | Create a profile     | 201     |
-| PUT    | `/profiles/:id` | Replace a profile    | 200     |
-| DELETE | `/profiles/:id` | Delete a profile     | 204     |
+Routes marked 🔒 need you to be logged in. Logging in sets an httpOnly `access_token` cookie, which the browser then sends automatically.
 
-Request body for POST and PUT:
+| Method | Path                  | Description                        | Success |
+| ------ | --------------------- | ---------------------------------- | ------- |
+| POST   | `/auth/register`      | Create an account and log in       | 201     |
+| POST   | `/auth/login`         | Log in                             | 200     |
+| POST   | `/auth/logout`        | Log out                            | 204     |
+| GET    | `/auth/me` 🔒         | The logged-in user                 | 200     |
+| GET    | `/profiles`           | List all profiles                  | 200     |
+| GET    | `/profiles/:id`       | Get one profile                    | 200     |
+| POST   | `/profiles` 🔒        | Create your profile (one per user) | 201     |
+| PUT    | `/profiles/:id` 🔒    | Update your profile                | 200     |
+| DELETE | `/profiles/:id` 🔒    | Delete your profile                | 204     |
 
-```json
+Request bodies:
+
+```jsonc
+// POST /auth/register and /auth/login
+{ "email": "you@example.com", "password": "8–72 characters" }
+// POST and PUT /profiles
 { "name": "3–100 characters", "description": "1–1000 characters" }
 ```
 
-If the body is invalid, the API returns `400` with the validation messages. If no profile has that id, it returns `404`.
+Error codes:
+
+| Code | Meaning |
+| ---- | ------- |
+| `400` | Invalid request body |
+| `401` | Not logged in, or wrong email/password |
+| `403` | Not your profile |
+| `404` | Not found |
+| `409` | Email already registered, or you already have a profile |
+
+### Security notes
+
+- **Passwords:** hashed with bcrypt (12 rounds) and never returned by the API.
+- **Login cookie:** the JWT lives in an `httpOnly`, `SameSite=Lax` cookie. Page scripts can't read it, which protects it from XSS. Other sites can't use it to send write requests, which protects against CSRF. In production it is also marked `Secure`, so it is only sent over HTTPS.
+- **Login errors:** an unknown email and a wrong password give the same error and take the same time, so attackers can't find out which emails are registered.
 
 ## Tests
 
