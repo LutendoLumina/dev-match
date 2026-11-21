@@ -7,5 +7,8 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
+    // Real database calls (a remote Postgres) plus bcrypt hashing are slow.
+    testTimeout: 60_000,
+    hookTimeout: 60_000,
   },
 });

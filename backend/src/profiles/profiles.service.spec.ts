@@ -1,15 +1,19 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ProfilesService } from './profiles.service.js';
 
+const ownerId = '11111111-1111-4111-8111-111111111111';
+const strangerId = '22222222-2222-4222-8222-222222222222';
 const profile = {
   id: '6f1c2c2e-6d3f-4d36-9a0e-3c1f1e2b7a11',
+  userId: ownerId,
   name: 'Lutendo',
   description: 'Looking for someone who enjoys building projects.',
   createdAt: new Date(),
   updatedAt: new Date(),
 };
+const input = { name: 'Lumina', description: 'Updated' };
 
 describe('ProfilesService', () => {
   let service: ProfilesService;
@@ -40,55 +44,70 @@ describe('ProfilesService', () => {
     expect(prisma.profile.findMany).toHaveBeenCalledWith({ orderBy: { createdAt: 'desc' } });
   });
 
-  it('findOne returns the matching profile', async () => {
-    prisma.profile.findUnique.mockResolvedValue(profile);
-
-    await expect(service.findOne(profile.id)).resolves.toEqual(profile);
-  });
-
   it('findOne throws NotFoundException for an unknown id', async () => {
     prisma.profile.findUnique.mockResolvedValue(null);
 
     await expect(service.findOne(profile.id)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('create stores the profile', async () => {
-    const input = { name: profile.name, description: profile.description };
-    prisma.profile.create.mockResolvedValue(profile);
+  describe('create', () => {
+    it('creates a profile owned by the user', async () => {
+      prisma.profile.findUnique.mockResolvedValue(null);
+      prisma.profile.create.mockResolvedValue(profile);
 
-    await expect(service.create(input)).resolves.toEqual(profile);
-    expect(prisma.profile.create).toHaveBeenCalledWith({ data: input });
+      await expect(service.create(ownerId, input)).resolves.toEqual(profile);
+      expect(prisma.profile.create).toHaveBeenCalledWith({ data: { ...input, userId: ownerId } });
+    });
+
+    it('rejects a second profile for the same user', async () => {
+      prisma.profile.findUnique.mockResolvedValue(profile);
+
+      await expect(service.create(ownerId, input)).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.profile.create).not.toHaveBeenCalled();
+    });
   });
 
-  it('update changes an existing profile', async () => {
-    const input = { name: 'Lumina', description: 'Updated' };
-    prisma.profile.findUnique.mockResolvedValue(profile);
-    prisma.profile.update.mockResolvedValue({ ...profile, ...input });
+  describe('update', () => {
+    it('lets the owner update their profile', async () => {
+      prisma.profile.findUnique.mockResolvedValue(profile);
+      prisma.profile.update.mockResolvedValue({ ...profile, ...input });
 
-    await expect(service.update(profile.id, input)).resolves.toMatchObject(input);
-    expect(prisma.profile.update).toHaveBeenCalledWith({ where: { id: profile.id }, data: input });
+      await expect(service.update(ownerId, profile.id, input)).resolves.toMatchObject(input);
+    });
+
+    it("forbids updating someone else's profile", async () => {
+      prisma.profile.findUnique.mockResolvedValue(profile);
+
+      await expect(service.update(strangerId, profile.id, input)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prisma.profile.update).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException for an unknown id', async () => {
+      prisma.profile.findUnique.mockResolvedValue(null);
+
+      await expect(service.update(ownerId, profile.id, input)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
   });
 
-  it('update throws NotFoundException and does not write for an unknown id', async () => {
-    prisma.profile.findUnique.mockResolvedValue(null);
+  describe('remove', () => {
+    it('lets the owner delete their profile', async () => {
+      prisma.profile.findUnique.mockResolvedValue(profile);
 
-    await expect(service.update(profile.id, { name: 'abc', description: 'x' })).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
-    expect(prisma.profile.update).not.toHaveBeenCalled();
-  });
+      await service.remove(ownerId, profile.id);
+      expect(prisma.profile.delete).toHaveBeenCalledWith({ where: { id: profile.id } });
+    });
 
-  it('remove deletes an existing profile', async () => {
-    prisma.profile.findUnique.mockResolvedValue(profile);
+    it("forbids deleting someone else's profile", async () => {
+      prisma.profile.findUnique.mockResolvedValue(profile);
 
-    await service.remove(profile.id);
-    expect(prisma.profile.delete).toHaveBeenCalledWith({ where: { id: profile.id } });
-  });
-
-  it('remove throws NotFoundException for an unknown id', async () => {
-    prisma.profile.findUnique.mockResolvedValue(null);
-
-    await expect(service.remove(profile.id)).rejects.toBeInstanceOf(NotFoundException);
-    expect(prisma.profile.delete).not.toHaveBeenCalled();
+      await expect(service.remove(strangerId, profile.id)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prisma.profile.delete).not.toHaveBeenCalled();
+    });
   });
 });

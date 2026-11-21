@@ -115,3 +115,9 @@ a { color: var(--accent); }
 .errors { color: var(--danger); margin: 0; }
 .muted { color: var(--muted); }
 .small { font-size: 0.875rem; }
+
+.nav { display: flex; align-items: center; gap: 1rem; }
+.nav a:not(.button) { font-weight: 600; text-decoration: none; }
+@media (max-width: 560px) {
+  .nav-email { display: none; }
+}
