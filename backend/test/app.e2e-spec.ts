@@ -38,8 +38,20 @@ describe.runIf(process.env.DATABASE_URL)('API (e2e)', () => {
     const bobAgent = request.agent(app.getHttpServer());
     const anonymous = request(app.getHttpServer());
 
-    // Register and check who we are
-    await aliceAgent.post('/api/auth/register').send(alice).expect(201);
+    // Registering creates the account but doesn't log in
+    await aliceAgent
+      .post('/api/auth/register')
+      .send(alice)
+      .expect(201)
+      .expect((res) => {
+        expect(res.body).toMatchObject({ email: alice.email, profileId: null });
+        expect(res.body).not.toHaveProperty('passwordHash');
+        expect(res.headers['set-cookie']).toBeUndefined();
+      });
+    await aliceAgent.get('/api/auth/me').expect(401);
+
+    // Logging in starts the session
+    await aliceAgent.post('/api/auth/login').send(alice).expect(200);
     await aliceAgent
       .get('/api/auth/me')
       .expect(200)
@@ -62,6 +74,7 @@ describe.runIf(process.env.DATABASE_URL)('API (e2e)', () => {
 
     // Bob can't change or delete Alice's profile
     await bobAgent.post('/api/auth/register').send(bob).expect(201);
+    await bobAgent.post('/api/auth/login').send(bob).expect(200);
     await bobAgent.put(`/api/profiles/${profileId}`).send({ name: 'Hacked', description: 'x' }).expect(403);
     await bobAgent.delete(`/api/profiles/${profileId}`).expect(403);
 

@@ -223,3 +223,12 @@ a { color: var(--accent); }
   color: var(--text);
   font: inherit;
 }
+
+.success {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #2e9e5b 12%, transparent);
+  border: 1px solid #2e9e5b;
+  font-weight: 600;
+}

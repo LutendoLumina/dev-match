@@ -2,7 +2,7 @@
 
 A full-stack matchmaking app for developers. Create a profile, like the people you'd like to meet, and chat when it's a match.
 
-**Live demo: [dev-match-n4vd.onrender.com](https://dev-match-n4vd.onrender.com)** (log in as `thabo@example.com` / `password123` to see matches and messages). The free server sleeps when idle, so the first visit can take about 30–50 seconds to load.
+**Live demo: [dev-match-n4vd.onrender.com](https://dev-match-n4vd.onrender.com)**. Sign up, log in and create your profile. The free server sleeps when idle, so the first visit can take about 30–50 seconds to load.
 
 | Layer    | Tech                                                         |
 | -------- | ------------------------------------------------------------ |
@@ -42,7 +42,6 @@ cd backend
 npm install
 cp .env.example .env      # then fill in DATABASE_URL and JWT_SECRET
 npm run db:migrate        # creates the tables
-npm run db:seed           # optional: example users (password: password123)
 npm run start:dev
 ```
 
@@ -64,7 +63,7 @@ All routes below are prefixed with `/api`, for example `GET /api/profiles`. Rout
 
 | Method | Path                  | Description                        | Success |
 | ------ | --------------------- | ---------------------------------- | ------- |
-| POST   | `/auth/register`      | Create an account and log in       | 201     |
+| POST   | `/auth/register`      | Create an account (then log in)    | 201     |
 | POST   | `/auth/login`         | Log in                             | 200     |
 | POST   | `/auth/logout`        | Log out                            | 204     |
 | GET    | `/auth/me` 🔒         | The logged-in user                 | 200     |

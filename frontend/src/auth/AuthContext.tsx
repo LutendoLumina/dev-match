@@ -19,8 +19,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthState = {
     user,
     loading,
-    login: async (credentials) => setUser(await authApi.login(credentials)),
-    register: async (credentials) => setUser(await authApi.register(credentials)),
+    login: async (credentials) => {
+      const loggedIn = await authApi.login(credentials)
+      setUser(loggedIn)
+      return loggedIn
+    },
+    register: async (credentials) => {
+      await authApi.register(credentials)
+    },
     logout: async () => {
       await authApi.logout()
       setUser(null)
